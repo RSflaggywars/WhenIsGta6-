@@ -1,88 +1,86 @@
 """Countdown to 19 November (Netherlands time, Europe/Amsterdam).
-Big flip-clock style digits, updates every 250ms. tkinter, zero deps.
+Minimal flip-clock style. tkinter, zero deps.
 """
 
 import tkinter as tk
 from datetime import datetime, timedelta, timezone
 
-# 19 November 2026, 00:00:00 in the Netherlands.
-# On that date the Netherlands is on CET (UTC+1) - DST ends late October.
 TARGET = datetime(2026, 11, 19, 0, 0, 0,
-                  tzinfo=timezone(timedelta(hours=1)))
+                  tzinfo=timezone(timedelta(hours=1)))  # CET = UTC+1
 
-BG = "#0d0d1a"
-PANEL = "#17172b"
-ACCENT = "#ffd166"
-TEXT = "#e8e8f0"
-MUTED = "#8f8fb0"
+BG = "#0e0e13"
+TEXT = "#f2f2f5"
+DIM = "#55555f"
+LINE = "#26262e"
+ACCENT = "#e8e8ee"
+
+FONT_NUM = ("Segoe UI", 64)
+FONT_UNIT = ("Segoe UI", 10)
+FONT_LABEL = ("Segoe UI", 11)
+FONT_SMALL = ("Segoe UI", 9)
 
 
-def digits_str(n, width=2):
-    return str(n).zfill(width)
+def z(n, w=2):
+    return str(n).zfill(w)
 
 
 class Countdown(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Countdown to 19 November")
+        self.title("19 November")
         self.configure(bg=BG)
         self.resizable(False, False)
 
-        tk.Label(self, text="UNTIL 19 NOVEMBER",
-                 font=("Consolas", 15, "bold"), fg=ACCENT, bg=BG
-                 ).pack(pady=(26, 4))
-        tk.Label(self, text="Netherlands time (CET)",
-                 font=("Consolas", 11), fg=MUTED, bg=BG
+        # header
+        tk.Label(self, text="19  N  O  V  E  M  B  E  R",
+                 font=FONT_LABEL, fg=DIM, bg=BG
+                 ).pack(pady=(34, 0))
+        tk.Label(self, text="AMSTERDAM · CET",
+                 font=FONT_SMALL, fg="#3a3a44", bg=BG
                  ).pack()
 
+        # digits row
         self.row = tk.Frame(self, bg=BG)
-        self.row.pack(pady=18)
+        self.row.pack(pady=26)
 
         self.labels = {}
-        units = [("DAYS", 4), ("HOURS", 2), ("MINUTES", 2), ("SECONDS", 2)]
+        units = [("DAYS", 4), ("HRS", 2), ("MIN", 2), ("SEC", 2)]
         for i, (name, w) in enumerate(units):
-            cell = tk.Frame(self.row, bg=PANEL,
-                            highlightbackground="#2a2a4a",
-                            highlightthickness=1)
-            cell.pack(side="left", padx=8)
-            num = tk.Label(cell, text="0" * w,
-                           font=("Consolas", 52, "bold"),
-                           fg=TEXT, bg=PANEL, width=w)
-            num.pack(padx=10, pady=(14, 0))
-            tk.Label(cell, text=name, font=("Consolas", 10, "bold"),
-                     fg=MUTED, bg=PANEL).pack(pady=(0, 10))
-            if i < len(units) - 1:
-                tk.Label(self.row, text=":", font=("Consolas", 36, "bold"),
-                         fg=ACCENT, bg=BG).pack(side="left", padx=4)
+            cell = tk.Frame(self.row, bg=BG)
+            cell.pack(side="left")
+            num = tk.Label(cell, text="0" * w, font=FONT_NUM,
+                           fg=TEXT, bg=BG)
+            num.pack()
+            tk.Label(cell, text=name, font=FONT_UNIT, fg=DIM, bg=BG
+                     ).pack(pady=(2, 0))
             self.labels[name] = num
+            if i < len(units) - 1:
+                tk.Label(self.row, text="·", font=("Segoe UI", 40),
+                         fg="#33333d", bg=BG).pack(side="left",
+                                                   padx=14, pady=30)
 
-        # progress bar: fraction of the year elapsed toward target
-        self.bar_bg = tk.Canvas(self, width=560, height=14, bg=PANEL,
-                                highlightthickness=1,
-                                highlightbackground="#2a2a4a")
-        self.bar_bg.pack(pady=(10, 6))
-        self.bar = self.bar_bg.create_rectangle(2, 2, 2, 12,
-                                                fill=ACCENT, width=0)
+        # hairline progress
+        self.canvas = tk.Canvas(self, width=520, height=2, bg=BG,
+                                highlightthickness=0)
+        self.canvas.pack(pady=(18, 0))
+        self.canvas.create_rectangle(0, 0, 520, 2, fill=LINE,
+                                     outline="")
+        self.fill = self.canvas.create_rectangle(0, 0, 0, 2,
+                                                 fill=TEXT, outline="")
 
-        self.status = tk.Label(self, text="", font=("Consolas", 11),
-                               fg=MUTED, bg=BG)
-        self.status.pack(pady=(2, 20))
+        self.status = tk.Label(self, text="", font=FONT_SMALL,
+                               fg="#3a3a44", bg=BG)
+        self.status.pack(pady=14)
 
         self.after(250, self.tick)
 
     def tick(self):
-        now = datetime.now(timezone.utc)
-        remain = TARGET - now
-        total = remain.total_seconds()
+        total = (TARGET - datetime.now(timezone.utc)).total_seconds()
 
         if total <= 0:
-            for name in self.labels:
-                self.labels[name].config(text="0" * len(self.labels[name].cget("text")))
-            self.labels["DAYS"].config(text="00")
-            self.labels["HOURS"].config(text="00")
-            self.labels["MINUTES"].config(text="00")
-            self.labels["SECONDS"].config(text="00")
-            self.status.config(text="IT'S 19 NOVEMBER!")
+            for name, w in (("DAYS", 4), ("HRS", 2), ("MIN", 2), ("SEC", 2)):
+                self.labels[name].config(text="0" * w)
+            self.status.config(text="it is 19 november")
             self.after(1000, self.tick)
             return
 
@@ -91,23 +89,16 @@ class Countdown(tk.Tk):
         minutes = int((total % 3600) // 60)
         seconds = int(total % 60)
 
-        self.labels["DAYS"].config(text=digits_str(days, 4))
-        self.labels["HOURS"].config(text=digits_str(hours))
-        self.labels["MINUTES"].config(text=digits_str(minutes))
-        self.labels["SECONDS"].config(text=digits_str(seconds))
+        self.labels["DAYS"].config(text=z(days, 4))
+        self.labels["HRS"].config(text=z(hours))
+        self.labels["MIN"].config(text=z(minutes))
+        self.labels["SEC"].config(text=z(seconds))
 
-        # progress: from 1 Jan 2026 to target
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        span = (TARGET - start).total_seconds()
-        frac = max(0.0, min(1.0, 1 - total / span))
-        self.bar_bg.coords(self.bar, 2, 2, 2 + 556 * frac, 12)
+        frac = max(0.0, min(1.0, 1 - total / (TARGET - start).total_seconds()))
+        self.canvas.coords(self.fill, 0, 0, 520 * frac, 2)
 
-        # extra context: also show exact target time
-        local = TARGET.astimezone(timezone(timedelta(hours=1)))
-        self.status.config(
-            text=f"target: {local:%d %B %Y %H:%M} CET   ·   "
-                 f"{total/86400:.1f} days left")
-
+        self.status.config(text=f"{total / 86400:.2f} days remaining")
         self.after(250, self.tick)
 
 
